@@ -29,7 +29,7 @@ def upsample(x, filters, strides, size=(3,3)):
 
     return x
 
-def GeneratorNew():
+def Generator():
     filter_down = [32, 32, 32, 32, 32, 64, 64, 64, 64, 128, 128, 128, 128, 256, 256]
     filter_up = [256, 256, 128, 128, 128, 128, 64, 64, 40, 40, 40, 40]
     dropout = [True, True, True, True, True, True, False, False, False, False, False, False]

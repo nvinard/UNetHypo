@@ -12,6 +12,7 @@ from utils import data_pipeline as dp
 # Define metrics here
 from tensorflow.keras import backend as K
 
+# Clip values in Gaussian above 0.1 to 1 and below 0.1 to 0
 def iou_coef_gaussian(y_true, y_pred, smooth=1):
     y_true = tf.dtypes.cast(y_true>0.1, tf.int32)
     y_true = tf.dtypes.cast(y_true, tf.float32)
@@ -22,6 +23,7 @@ def iou_coef_gaussian(y_true, y_pred, smooth=1):
     iou = K.mean((intersection + smooth) / (union + smooth), axis=0)
     return iou
 
+# Clip values in Gaussian above 0.1 to 1 and below 0.1 to 0
 def dice_coef_gaussian(y_true, y_pred, smooth=1):
     y_true = tf.dtypes.cast(y_true>0.1, tf.int32)
     y_true = tf.dtypes.cast(y_true, tf.float32)
@@ -43,7 +45,7 @@ def train_and_evaluate(output_dir, cfg):
 
     if cfg.FROM_CHECKPOINT == False:
         # Create new checkpoint folder
-        checkpoint_dir = os.path.join(output_dir, "training_checkpoints/training_{}_{}".format(cfg.LABEL,datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
+        checkpoint_dir = os.path.join(output_dir, "training_checkpoints/training_{}_{}".format(cfg.MODEL_NAME,datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
         if os.path.exists(checkpoint_dir) == False:
             os.mkdir(checkpoint_dir)
     else:
@@ -68,7 +70,7 @@ def train_and_evaluate(output_dir, cfg):
         latest = str(checkpoints[-1])
         print("LATEST checkpoint", latest)
 
-        generator = model.GeneratorNew()
+        generator = model.Generator()
         generator.compile(
             optimizer=tf.keras.optimizers.Adam(learning_rate=cfg.LEARNING_RATE),
             loss=tf.keras.losses.BinaryCrossentropy(),
@@ -76,7 +78,7 @@ def train_and_evaluate(output_dir, cfg):
         generator.load_weights(latest)
     else:
         print("Starting training from scratch")
-        generator = model.GeneratorNew()
+        generator = model.Generator()
         generator.compile(
                 optimizer=tf.keras.optimizers.Adam(learning_rate=cfg.LEARNING_RATE),
                 loss=tf.keras.losses.BinaryCrossentropy(),
@@ -84,10 +86,10 @@ def train_and_evaluate(output_dir, cfg):
 
     file_path = os.path.join(cfg.PATH_TO_DATA,'%s*' % cfg.TRAIN)
     file_list = tf.io.matching_files(file_path)
-    n_train_examples = len(file_list)*400
+    n_train_examples = len(file_list)*400 # 400 = number of (data,label)-pairs pers file
     file_path_test = os.path.join(cfg.PATH_TO_DATA,'%s*' % cfg.TEST)
     file_list_test = tf.io.matching_files(file_path_test)
-    n_test_examples = len(file_list_test)*400
+    n_test_examples = len(file_list_test)*400 # 400 = number of (data,label)-pairs pers file
     steps_per_epoch = n_train_examples // cfg.BATCH_SIZE
     test_steps = n_test_examples // cfg.BATCH_SIZE
 
@@ -101,10 +103,10 @@ def train_and_evaluate(output_dir, cfg):
         epochs=cfg.EVAL_STEPS,
         steps_per_epoch=steps_per_epoch,
         validation_steps=test_steps,
-        callbacks=callbacks,
-        verbose=2)
+        #callbacks=callbacks,
+        verbose=1)
 
-    save_as = os.path.join(output_dir, "{}_{}.h5".format(cfg.LABEL, datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
+    save_as = os.path.join(output_dir, "{}_{}.h5".format(cfg.MODEL_NAME, datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
     generator.save(save_as, overwrite=True, include_optimizer=True)
 
     # Save accuracy and loss curves
@@ -124,7 +126,7 @@ def train_and_evaluate(output_dir, cfg):
     plt.plot(epochs, val_acc, 'b', label='Validation accuracy')
     plt.title('Training accuracy')
     plt.legend()
-    acc_name = os.path.join(output_dir, "Accuracy_{}_{}.png".format(cfg.LABEL, datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
+    acc_name = os.path.join(output_dir, "Accuracy_{}_{}.png".format(cfg.MODEL_NAME, datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
     plt.savefig(acc_name)
     plt.close()
 
@@ -133,7 +135,7 @@ def train_and_evaluate(output_dir, cfg):
     plt.plot(epochs, val_loss, 'b', label='Validation Loss')
     plt.title('Training loss')
     plt.legend()
-    loss_name = os.path.join(output_dir, "Loss_{}_{}.png".format(cfg.LABEL, datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
+    loss_name = os.path.join(output_dir, "Loss_{}_{}.png".format(cfg.MODEL_NAME, datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
     plt.savefig(loss_name)
     plt.close()
 
@@ -142,7 +144,7 @@ def train_and_evaluate(output_dir, cfg):
     plt.plot(epochs, iou_g_val, 'g', label='IOU validation')
     plt.title('IoU')
     plt.legend()
-    acc_name = os.path.join(output_dir, "IoU_{}_{}.png".format(cfg.LABEL, datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
+    acc_name = os.path.join(output_dir, "IoU_{}_{}.png".format(cfg.MODEL_NAME, datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
     plt.savefig(acc_name)
 
     plt.figure()
@@ -150,6 +152,6 @@ def train_and_evaluate(output_dir, cfg):
     plt.plot(epochs, dice_g_val, 'g', label='F1 validation')
     plt.title('F1-score')
     plt.legend()
-    acc_name = os.path.join(output_dir, "F1_{}_{}.png".format(cfg.LABEL, datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
+    acc_name = os.path.join(output_dir, "F1_{}_{}.png".format(cfg.MODEL_NAME, datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
     plt.savefig(acc_name)
 

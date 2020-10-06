@@ -1,5 +1,5 @@
 import tensorflow as tf
-from utils import data_augmentation as da
+from utils import data_augmentations as da
 import os
 
 # Create an input function reading a file using the Dataset API
